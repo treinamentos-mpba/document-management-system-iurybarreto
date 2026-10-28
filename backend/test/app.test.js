@@ -24,6 +24,14 @@ async function withServer(options, run) {
   }
 }
 
+async function uploadTestDocument(baseUrl, owner = 'usuario-forjado') {
+  const formData = new FormData();
+  formData.append('file', new Blob(['conteudo local'], { type: 'text/plain' }), 'nota.txt');
+  formData.append('owner', owner);
+  const response = await fetch(`${baseUrl}/upload`, { method: 'POST', body: formData });
+  return { response, document: await response.json() };
+}
+
 test('o app backend é exportado e mantém o health check', async () => {
   const app = require('../src/app');
   assert.equal(typeof app, 'function');
@@ -35,24 +43,32 @@ test('o app backend é exportado e mantém o health check', async () => {
   });
 });
 
-test('envia, lista e baixa um documento sem expor o nome interno', async () => {
+test('faz upload de documento e ignora o owner enviado pelo cliente', async () => {
   await withServer({}, async (baseUrl) => {
-    const formData = new FormData();
-    formData.append('file', new Blob(['conteudo local'], { type: 'text/plain' }), 'nota.txt');
-    formData.append('owner', 'usuario-forjado');
+    const { response, document } = await uploadTestDocument(baseUrl);
+    assert.equal(response.status, 201);
+    assert.equal(document.originalName, 'nota.txt');
+    assert.equal(document.owner, 'test-user');
+    assert.equal(document.size, 14);
+    assert.equal('storageName' in document, false);
+  });
+});
 
-    const uploadResponse = await fetch(`${baseUrl}/upload`, { method: 'POST', body: formData });
+test('lista os documentos enviados pelo usuário atual', async () => {
+  await withServer({}, async (baseUrl) => {
+    const { response: uploadResponse, document } = await uploadTestDocument(baseUrl);
     assert.equal(uploadResponse.status, 201);
-    const uploaded = await uploadResponse.json();
-    assert.equal(uploaded.originalName, 'nota.txt');
-    assert.equal(uploaded.owner, 'test-user');
-    assert.equal(uploaded.size, 14);
-    assert.equal('storageName' in uploaded, false);
-
     const listResponse = await fetch(`${baseUrl}/documents`);
-    assert.deepEqual(await listResponse.json(), { documents: [uploaded] });
+    assert.deepEqual(await listResponse.json(), { documents: [document] });
+  });
+});
 
-    const downloadResponse = await fetch(`${baseUrl}/documents/${uploaded.id}/download`);
+test('baixa um documento pelo identificador', async () => {
+  await withServer({}, async (baseUrl) => {
+    const { response: uploadResponse, document } = await uploadTestDocument(baseUrl);
+    assert.equal(uploadResponse.status, 201);
+
+    const downloadResponse = await fetch(`${baseUrl}/documents/${document.id}/download`);
     assert.equal(downloadResponse.status, 200);
     assert.equal(await downloadResponse.text(), 'conteudo local');
     assert.match(downloadResponse.headers.get('content-disposition'), /filename="nota\.txt"/);
