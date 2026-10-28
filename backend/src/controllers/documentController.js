@@ -1,6 +1,8 @@
+const { toDocumentResponse } = require('./documentPresenter');
+
 function createDocumentController(service) {
   return {
-    upload(req, res) {
+    async upload(req, res) {
       if (!req.file) {
         const error = new Error('Selecione um arquivo para enviar.');
         error.status = 400;
@@ -8,11 +10,17 @@ function createDocumentController(service) {
         throw error;
       }
 
-      res.status(201).json(service.createDocument(req.file, req.user.id));
+      const document = await service.createDocument({
+        originalName: req.file.originalname,
+        storageName: req.file.filename,
+        size: req.file.size
+      }, req.user.id);
+      res.status(201).json(toDocumentResponse(document));
     },
 
     list(req, res) {
-      res.json({ documents: service.listDocuments(req.user.id) });
+      const documents = service.listDocuments(req.user.id).map(toDocumentResponse);
+      res.json({ documents });
     },
 
     async download(req, res) {

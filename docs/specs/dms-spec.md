@@ -45,7 +45,7 @@ Permitir que usuários enviem, listem e baixem documentos, armazenando os arquiv
 | --- | --- |
 | RNF-01 | Arquivos são gravados somente no filesystem local usando `multer` com `diskStorage`, em `backend/storage` por padrão. |
 | RNF-02 | Metadados ficam em memória e podem ser perdidos ao reiniciar o backend. |
-| RNF-03 | Porta, diretório de armazenamento, limite do arquivo e identidade local são configuráveis por variáveis de ambiente. |
+| RNF-03 | Porta, diretório de armazenamento, limites de arquivo e frequência de upload, e identidade local são configuráveis por variáveis de ambiente. |
 | RNF-04 | Respostas não expõem caminhos físicos ou nomes internos de armazenamento. |
 | RNF-05 | Valores fornecidos pelo cliente não são concatenados a caminhos de arquivo. |
 | RNF-06 | Erros de entrada, upload e leitura são tratados nas fronteiras HTTP. |
@@ -58,9 +58,10 @@ Permitir que usuários enviem, listem e baixem documentos, armazenando os arquiv
 | `PORT` | `3000` | Porta HTTP do backend. |
 | `STORAGE_DIR` | `backend/storage` | Diretório local dos arquivos enviados. |
 | `MAX_FILE_SIZE_BYTES` | `10485760` | Limite de upload de 10 MiB. |
+| `MAX_UPLOADS_PER_MINUTE` | `30` | Máximo de uploads por minuto por endereço IP. |
 | `DMS_USER_ID` | `local-user` | Identidade fixa atribuída pelo servidor nesta versão. |
 
-`DMS_USER_ID` não implementa autenticação. Todos os clientes de uma mesma instância compartilham essa identidade; isolamento multiusuário real depende de integração futura com middleware de autenticação confiável.
+O executável escuta em `127.0.0.1` por padrão. `DMS_USER_ID` não implementa autenticação. Todos os clientes locais de uma mesma instância compartilham essa identidade; isolamento multiusuário real depende de integração futura com middleware de autenticação confiável antes de expor a API à rede.
 
 ## 5. Modelo de dados
 

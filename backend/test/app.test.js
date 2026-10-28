@@ -5,6 +5,7 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const { createApp } = require('../src/app');
+const { createLocalFileRepository } = require('../src/repositories/localFileRepository');
 
 async function withServer(options, run) {
   const storageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'dms-test-'));
@@ -87,4 +88,41 @@ test('retorna 404 para documento inexistente', async () => {
     assert.equal(response.status, 404);
     assert.equal((await response.json()).error.code, 'DOCUMENT_NOT_FOUND');
   });
+});
+
+test('exige uma identidade fornecida pelo middleware de autenticação', async () => {
+  await withServer({ authenticationMiddleware: (req, res, next) => next() }, async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/documents`);
+    assert.equal(response.status, 401);
+    assert.equal((await response.json()).error.code, 'UNAUTHENTICATED');
+  });
+});
+
+test('limita uploads por cliente dentro da janela configurada', async () => {
+  await withServer({ maxUploadsPerMinute: 1 }, async (baseUrl) => {
+    const firstForm = new FormData();
+    firstForm.append('file', new Blob(['primeiro']), 'primeiro.txt');
+    const firstResponse = await fetch(`${baseUrl}/upload`, { method: 'POST', body: firstForm });
+    assert.equal(firstResponse.status, 201);
+
+    const secondForm = new FormData();
+    secondForm.append('file', new Blob(['segundo']), 'segundo.txt');
+    const secondResponse = await fetch(`${baseUrl}/upload`, { method: 'POST', body: secondForm });
+    assert.equal(secondResponse.status, 429);
+    assert.equal((await secondResponse.json()).error.code, 'UPLOAD_RATE_LIMITED');
+  });
+});
+
+test('rejeita nomes internos que tentem escapar do diretório de armazenamento', async () => {
+  const storageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'dms-path-test-'));
+  const fileRepository = createLocalFileRepository({
+    storageDir,
+    maxFileSizeBytes: 1024
+  });
+
+  try {
+    await assert.rejects(fileRepository.getFilePath('../outside.txt'), /Nome interno de arquivo inválido/);
+  } finally {
+    await fs.rm(storageDir, { recursive: true, force: true });
+  }
 });
