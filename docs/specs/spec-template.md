@@ -4,7 +4,7 @@
 > especificação (Spec Driven Development). Preencha cada seção com o apoio do
 > Plan Mode do GitHub Copilot durante o Passo 1.
 
-## 1. Objetivo
+## 1. Objetivo 
 
 Descreva em uma frase o que o sistema deve entregar.
 
