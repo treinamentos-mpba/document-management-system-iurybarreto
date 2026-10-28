@@ -1,7 +1,7 @@
 const path = require('node:path');
 const express = require('express');
 const multer = require('multer');
-const { createDocumentRepository } = require('./repositories/documentRepository');
+const { createDocumentRepository }  = require('./repositories/documentRepository');
 const { createDocumentService } = require('./services/documentService');
 const { createDocumentRoutes } = require('./routes/documentRoutes');
 
