@@ -275,24 +275,41 @@ h1 {
   font-size: 11px;
 }
 
-.download-link,
+.download-button,
 .text-button {
   flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: var(--green);
   font-size: 13px;
   font-weight: 700;
   text-decoration: none;
+  cursor: pointer;
 }
 
-.download-link span {
+.download-button span {
   margin-left: 3px;
   color: var(--coral);
   font-size: 16px;
 }
 
-.download-link:hover,
+.download-button:hover:not(:disabled),
 .text-button:hover {
   color: var(--coral);
+}
+
+.download-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.download-error {
+  display: block;
+  max-width: 180px;
+  color: #a33e31;
+  font-size: 11px;
+  text-align: right;
 }
 
 .list-message,

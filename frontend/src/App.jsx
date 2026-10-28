@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { DocumentList } from './components/DocumentList.jsx';
-import { UploadForm } from './components/UploadForm.jsx';
+import { UploadComponent } from './components/UploadComponent.jsx';
 import { fetchDocuments, uploadDocument } from './services/documents.js';
 import './styles.css';
 
@@ -57,7 +57,7 @@ export default function App() {
         </p>
       </section>
 
-      <UploadForm onUpload={handleUpload} />
+      <UploadComponent onUpload={handleUpload} />
 
       <section className="documents-section" aria-labelledby="documents-title">
         <div className="section-heading">

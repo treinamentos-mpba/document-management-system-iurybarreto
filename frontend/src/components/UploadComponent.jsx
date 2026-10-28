@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 
-export function UploadForm({ onUpload }) {
+export function UploadComponent({ onUpload }) {
   const inputRef = useRef(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');

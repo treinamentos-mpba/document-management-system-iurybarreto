@@ -1,3 +1,5 @@
+import { DownloadButton } from './DownloadButton.jsx';
+
 function formatFileSize(size) {
   if (size < 1024) return `${size} B`;
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
@@ -44,13 +46,7 @@ export function DocumentList({ documents, isLoading, error, onRetry }) {
               {formatFileSize(document.size)} <span aria-hidden="true">·</span> {formatUploadDate(document.uploadedAt)}
             </span>
           </div>
-          <a
-            className="download-link"
-            href={`/api/documents/${encodeURIComponent(document.id)}/download`}
-            aria-label={`Baixar ${document.originalName}`}
-          >
-            Baixar <span aria-hidden="true">↓</span>
-          </a>
+          <DownloadButton document={document} />
         </li>
       ))}
     </ul>
