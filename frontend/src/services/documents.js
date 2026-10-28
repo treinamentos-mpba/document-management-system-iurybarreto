@@ -1,17 +1,14 @@
-async function request(url, options) {
-  const response = await fetch(url, options);
-  const result = await response.json().catch(() => ({}));
-
+async function assertSuccessfulResponse(response) {
   if (!response.ok) {
+    const result = await response.json().catch(() => ({}));
     throw new Error(result.error?.message || 'Não foi possível concluir a solicitação.');
   }
-
-  return result;
 }
 
-async function getErrorMessage(response) {
-  const result = await response.json().catch(() => ({}));
-  return result.error?.message || 'Não foi possível concluir a solicitação.';
+async function request(url, options) {
+  const response = await fetch(url, options);
+  await assertSuccessfulResponse(response);
+  return response.json();
 }
 
 export async function fetchDocuments() {
@@ -27,16 +24,19 @@ export async function uploadDocument(file) {
 
 export async function downloadDocument(documentId, fileName) {
   const response = await fetch(`/api/documents/${encodeURIComponent(documentId)}/download`);
-  if (!response.ok) {
-    throw new Error(await getErrorMessage(response));
-  }
+  await assertSuccessfulResponse(response);
 
   const fileUrl = URL.createObjectURL(await response.blob());
-  const link = document.createElement('a');
-  link.href = fileUrl;
-  link.download = fileName;
-  document.body.append(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(fileUrl);
+  try {
+    const link = document.createElement('a');
+    link.href = fileUrl;
+    link.download = fileName;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(fileUrl), 1000);
+  } catch (error) {
+    URL.revokeObjectURL(fileUrl);
+    throw error;
+  }
 }

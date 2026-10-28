@@ -4,24 +4,37 @@ const multer = require('multer');
 const { createDocumentRepository }  = require('./repositories/documentRepository');
 const { createDocumentService } = require('./services/documentService');
 const { createDocumentRoutes } = require('./routes/documentRoutes');
+const { createLocalFileRepository } = require('./repositories/localFileRepository');
 
 const DEFAULT_MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+const DEFAULT_MAX_UPLOADS_PER_MINUTE = 30;
 
 function createApp(options = {}) {
   const storageDir = path.resolve(
-    options.storageDir || process.env.STORAGE_DIR || path.join(__dirname, '../storage')
+    options.storageDir ?? process.env.STORAGE_DIR ?? path.join(__dirname, '../storage')
   );
   const maxFileSizeBytes = Number(
-    options.maxFileSizeBytes || process.env.MAX_FILE_SIZE_BYTES || DEFAULT_MAX_FILE_SIZE_BYTES
+    options.maxFileSizeBytes ?? process.env.MAX_FILE_SIZE_BYTES ?? DEFAULT_MAX_FILE_SIZE_BYTES
   );
-  const userId = options.userId || process.env.DMS_USER_ID || 'local-user';
+  const maxUploadsPerMinute = Number(
+    options.maxUploadsPerMinute ?? process.env.MAX_UPLOADS_PER_MINUTE ?? DEFAULT_MAX_UPLOADS_PER_MINUTE
+  );
+  const userId = options.userId ?? process.env.DMS_USER_ID ?? 'local-user';
 
   if (!Number.isSafeInteger(maxFileSizeBytes) || maxFileSizeBytes <= 0) {
     throw new Error('MAX_FILE_SIZE_BYTES deve ser um inteiro positivo.');
   }
+  if (!Number.isSafeInteger(maxUploadsPerMinute) || maxUploadsPerMinute <= 0) {
+    throw new Error('MAX_UPLOADS_PER_MINUTE deve ser um inteiro positivo.');
+  }
 
   const repository = createDocumentRepository();
-  const service = createDocumentService({ repository, storageDir });
+  const fileRepository = createLocalFileRepository({ storageDir, maxFileSizeBytes });
+  const service = createDocumentService({ repository, fileRepository });
+  const authenticationMiddleware = options.authenticationMiddleware || ((req, res, next) => {
+    req.user = { id: userId };
+    next();
+  });
   const app = express();
 
   app.use(express.json());
@@ -29,11 +42,18 @@ function createApp(options = {}) {
     res.json({ status: 'ok' });
   });
 
-  app.use((req, res, next) => {
-    req.user = { id: userId };
+  app.use('/', authenticationMiddleware, (req, res, next) => {
+    if (!req.user?.id) {
+      return res.status(401).json({
+        error: { code: 'UNAUTHENTICATED', message: 'Autenticação necessária.' }
+      });
+    }
     next();
-  });
-  app.use('/', createDocumentRoutes({ service, storageDir, maxFileSizeBytes }));
+  }, createDocumentRoutes({
+    service,
+    uploadMiddleware: fileRepository.uploadSingle,
+    maxUploadsPerMinute
+  }));
 
   app.use((error, req, res, next) => {
     if (res.headersSent) return next(error);
@@ -57,8 +77,9 @@ const app = createApp();
 
 if (require.main === module) {
   const port = process.env.PORT || 3000;
-  app.listen(port, () => {
-    console.log(`DMS backend ouvindo na porta ${port}`);
+  const host = '127.0.0.1';
+  app.listen(port, host, () => {
+    console.log(`DMS backend ouvindo em ${host}:${port}`);
   });
 }
 
